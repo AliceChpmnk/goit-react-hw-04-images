@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import Searchbar from './Searchbar/Searchbar';
 import css from '../styles.module.css';
@@ -16,63 +16,73 @@ const Status = {
 
 const PER_PAGE = 12;
 
-export default class App extends Component {
+export default function App() {
+  const [query, setQuery] = useState('');
+  const [pictures, setPictures] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [error, setError] = useState(null);
+  const [islastPage, setIslastPage] = useState(false);
+  const [status, setStatus] = useState(Status.IDLE);
 
-  state = {
-    query: '',
-    pictures: [],
-    total: 0,
-    page: 1,
-    error: null,
-    islastPage: false,
-    status: Status.IDLE,
-  }
 
-    static propTypes = {
-        query: PropTypes.string,
-  }
-  
-  componentDidUpdate(_, prevState) {
-        const prevQuery = prevState.query;
-        const nextQuery = this.state.query;
-        const prevPage = prevState.page;
-        const nextPage = this.state.page;
-        
-    if (prevQuery !== nextQuery || prevPage !== nextPage) {
-      this.setState({ status: Status.PENDING });
-      this.setState({ query: nextQuery });
-      API.getPicturesByName(nextQuery, nextPage)
-        .then(pictures => {
-          this.setState({ pictures: [...this.state.pictures, ...pictures.hits], total: pictures.totalHits, status: Status.RESOLVED });
-          if (nextPage >= pictures.totalHits / PER_PAGE || pictures.totalHits < PER_PAGE) {
-            this.setState({ islastPage: true });
-          }
-        })
-        .catch(error => this.setState({ error, status: Status.REJECTED }));
+  useEffect(() => {
+    if (query === '') {
+      return;
     }
+
+    const fetchImages = async (query, page) => {
+      try {
+        setStatus(Status.PENDING);
+        const newPictures = await API.getPicturesByName(query, page);
+        setPictures(state => [...state, ...newPictures.hits]);
+        setTotal(newPictures.totalHits);
+        setStatus(Status.RESOLVED);
+      } catch (error) {
+        setError(error.message);
+        setStatus(Status.REJECTED);
+      }
+    };
+
+    fetchImages(query, page);
     
+  }, [query, page])
+
+  useEffect(() => {
+    if (page >= total / PER_PAGE || total < PER_PAGE) {
+      setIslastPage(true);
+    }
+  }, [total, page])
+
+  useEffect(() => {
+    if (error) {
+      console.log(error);
+    }
+  }, [error])
+
+  const onLoadMoreBtnClick = () => {
+        setPage(page => page + 1);
   }
   
-   onLoadMoreBtnClick = () => {
-        this.setState({ page: this.state.page + 1 });
-    }
-
-  onSubmit = (query) => {
-    this.setState({ query, pictures: [], page: 1, islastPage: false });
+  const onSubmit = (query) => {
+    setQuery(query);
+    setPictures([]);
+    setPage(1);
+    setIslastPage(false);
   }
 
-  render() {
-    const { pictures, status, query, islastPage } = this.state;
-
-    return (
-      <div className={css.App}>
-        <Searchbar onSubmit={this.onSubmit} />
-        {status === 'rejected' && <div>Oooops, something went wrong :( Try reloading the page.</div>}
-        {(status === 'resolved' && pictures.length === 0) && <div>Sorry, there are no images matching your search query. Please try again.</div>}
+  return (
+    <div className={css.App}>
+        <Searchbar onSubmit={onSubmit} />
+        {status === Status.REJECTED && <div>Oooops, something went wrong :( Try reloading the page.</div>}
+        {(status === Status.RESOLVED && pictures.length === 0) && <div>Sorry, there are no images matching your search query. Please try again.</div>}
         {pictures.length > 0 && <ImageGallery pictures={pictures} query={ query } />}
-        {status === 'pending' && <Loader />}
-        {(pictures.length > 0 && status !== 'pending' && !islastPage) && <LoadMoreButton onClick={this.onLoadMoreBtnClick} />}
-      </div>
-    )
-  }
+        {status === Status.PENDING && <Loader />}
+        {(pictures.length > 0 && status !== Status.PENDING && !islastPage) && <LoadMoreButton onClick={onLoadMoreBtnClick} />}
+    </div>
+  )
+}
+
+App.propTypes = {
+  query: PropTypes.string,
 }

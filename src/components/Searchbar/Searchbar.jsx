@@ -1,51 +1,52 @@
-import React, { Component } from 'react';
+import React, { useState } from 'react';
 import css from '../../styles.module.css';
 import IconButton from './IconButton';
 import { BsSearchHeart } from 'react-icons/bs';
+import PropTypes from 'prop-types';
 
-export default class Searchbar extends Component {
-    state = {
-        query: '',
+export default function Searchbar({onSubmit}) {
+    const [query, setQuery] = useState('');
+    
+    const handleQueryChange = e => {
+        setQuery(e.currentTarget.value.toLowerCase());
     }
+    
+    const reset = () => {
+        setQuery('');
+    };
 
-    handleQueryChange = e => {
-        this.setState({ query: e.currentTarget.value.toLowerCase() });
-    }
-
-    handleSubmit = e => {
+    const handleSubmit = e => {
         e.preventDefault();
         
-    if (this.state.query.trim() === '') {
+    if (query.trim() === '') {
       alert('Please enter any word');
       return;
     }
 
-    this.props.onSubmit(this.state.query);
+    onSubmit(query);
 
-    this.reset();
+    reset();
     };
 
-    reset = () => {
-    this.setState({ query: ''});
-    };
-
-  render() {
-    return (
+  return (
     <header className={css.Searchbar}>
-            <form className={css.SearchForm} onSubmit={this.handleSubmit}>
-                <IconButton type="submit"><BsSearchHeart /> </IconButton>
-
-            <input
-                className={css.SearchForm_input}
-                type="text"
-                autoComplete="off"
-                autoFocus
-                placeholder="Search images and photos"
-                value={this.state.query}
-                onChange={this.handleQueryChange}
-            />
-        </form>
+     <form className={css.SearchForm} onSubmit={handleSubmit}>
+            <IconButton type="submit"><BsSearchHeart /> </IconButton>
+ 
+        <input
+            className={css.SearchForm_input}
+            type="text"
+            autoComplete="off"
+            autoFocus
+            placeholder="Search images and photos"
+            value={query}
+            onChange={handleQueryChange}
+        />
+     </form>
     </header>
-    )
-  }
+  )
+}
+
+Searchbar.propTypes = {
+    onSubmit: PropTypes.func.isRequired,
 }
