@@ -19,9 +19,8 @@ const PER_PAGE = 12;
 export default function App() {
   const [query, setQuery] = useState('');
   const [pictures, setPictures] = useState([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [error, setError] = useState(null);
+  // const [error, setError] = useState(null);
   const [islastPage, setIslastPage] = useState(false);
   const [status, setStatus] = useState(Status.IDLE);
 
@@ -36,10 +35,12 @@ export default function App() {
         setStatus(Status.PENDING);
         const newPictures = await API.getPicturesByName(query, page);
         setPictures(state => [...state, ...newPictures.hits]);
-        setTotal(newPictures.totalHits);
         setStatus(Status.RESOLVED);
+        if (page >= newPictures.totalHits / PER_PAGE || newPictures.totalHits < PER_PAGE) {
+          setIslastPage(true);
+        }
       } catch (error) {
-        setError(error.message);
+        // setError(error.message);
         setStatus(Status.REJECTED);
       }
     };
@@ -47,18 +48,6 @@ export default function App() {
     fetchImages(query, page);
     
   }, [query, page])
-
-  useEffect(() => {
-    if (page >= total / PER_PAGE || total < PER_PAGE) {
-      setIslastPage(true);
-    }
-  }, [total, page])
-
-  useEffect(() => {
-    if (error) {
-      console.log(error);
-    }
-  }, [error])
 
   const onLoadMoreBtnClick = () => {
         setPage(page => page + 1);
